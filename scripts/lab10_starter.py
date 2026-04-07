@@ -132,7 +132,7 @@ class RrtPlanner:
         # Choose uniform randomly sampled points
         ######### Your code starts here #########
         x_min, x_max, y_min, y_max = self.map_aabb
-
+        ''' IF RANDOM SAMPLE MUST BE IN BOUNDS
         while True:
             x = np.random.uniform(x_min, x_max)
             y = np.random.uniform(y_min, y_max)
@@ -141,6 +141,12 @@ class RrtPlanner:
 
             if not self._is_in_collision(q_rand):
                 return q_rand
+                '''
+        x = np.random.uniform(x_min, x_max)
+        y = np.random.uniform(y_min, y_max)
+
+        q_rand = Node(x, y) 
+        return q_rand    
         ######### Your code ends here #########
 
     def _nearest_vertex(self, graph: List[Node], q: Node) -> Node:
