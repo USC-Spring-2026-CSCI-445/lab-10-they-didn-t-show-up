@@ -203,7 +203,7 @@ class RrtPlanner:
 ######### Your code starts here #########
 class ObstacleFreeWaypointController:
     def __init__(self, waypoints: List[Dict]):
-        rospy.init_node("waypoint_follower", anonymous=True)
+        # rospy.init_node("waypoint_follower", anonymous=True)
         self.waypoints = waypoints
         # Subscriber to the robot's current position (assuming you have Odometry data)
         self.odom_sub = rospy.Subscriber("/odom", Odometry, self.odom_callback)
