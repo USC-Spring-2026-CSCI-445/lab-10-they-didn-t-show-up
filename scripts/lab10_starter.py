@@ -132,7 +132,7 @@ class RrtPlanner:
         # Choose uniform randomly sampled points
         ######### Your code starts here #########
         x_min, x_max, y_min, y_max = self.map_aabb
-
+        ''' IF RANDOM SAMPLE MUST BE IN BOUNDS
         while True:
             x = np.random.uniform(x_min, x_max)
             y = np.random.uniform(y_min, y_max)
@@ -141,12 +141,27 @@ class RrtPlanner:
 
             if not self._is_in_collision(q_rand):
                 return q_rand
+                '''
+        x = np.random.uniform(x_min, x_max)
+        y = np.random.uniform(y_min, y_max)
+
+        q_rand = Node(x, y) 
+        return q_rand    
         ######### Your code ends here #########
 
     def _nearest_vertex(self, graph: List[Node], q: Node) -> Node:
         # Determine vertex nearest to sampled point
         ######### Your code starts here #########
-
+        mindist = np.inf
+        minnode = None
+        for node in graph:
+            dist = q.distance_to(node)
+            if(dist < mindist):
+                mindist = dist
+                minnode = node
+                
+        return minnode
+            
         ######### Your code ends here #########
 
     def _is_in_collision(self, q_rand: Node):
@@ -166,7 +181,9 @@ class RrtPlanner:
 
         # Check if sampled point is in collision and add to tree if not
         ######### Your code starts here #########
-
+        if not self._is_in_collision(q_rand):
+            graph.append(q_rand)
+            
         ######### Your code ends here #########
 
     def generate_plan(self, start: POSITION_TYPE, goal: POSITION_TYPE) -> Tuple[List[POSITION_TYPE], List[Node]]:
@@ -191,6 +208,9 @@ class RrtPlanner:
         goal_node = Node(np.array([goal["x"], goal["y"]]), None)
         plan = []
 
+        stepSize = .2 #CHANGE THESE VALUES BETWEEN ITERATIONS
+        numIters = 1000
+        
         # Find path from start to goal location through tree
         ######### Your code starts here #########
 
@@ -201,6 +221,23 @@ class RrtPlanner:
 
 # Protip: copy the ObstacleFreeWaypointController class from lab5.py here
 ######### Your code starts here #########
+def publish_waypoints(waypoints: List[Dict], publisher: rospy.Publisher):
+    marker_array = MarkerArray()
+    for i, waypoint in enumerate(waypoints):
+        marker = Marker()
+        marker.header.frame_id = "odom"
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = "waypoints"
+        marker.id = i
+        marker.type = Marker.CYLINDER
+        marker.action = Marker.ADD
+        marker.pose.position = Point(waypoint["x"], waypoint["y"], 0.0)
+        marker.pose.orientation = Quaternion(0, 0, 0, 1)
+        marker.scale = Vector3(0.1, 0.1, 0.1)
+        marker.color = ColorRGBA(0.0, 1.0, 0.0, 0.5)
+        marker_array.markers.append(marker)
+    publisher.publish(marker_array)
+    
 class ObstacleFreeWaypointController:
     def __init__(self, waypoints: List[Dict]):
         # rospy.init_node("waypoint_follower", anonymous=True)
@@ -236,21 +273,21 @@ class ObstacleFreeWaypointController:
 
         # Calculate error in position and orientation
         ######### Your code starts here #########
-        distance_error = math.sqrt((goal_position["x"] - self.current_position["x"])**2 + (goal_position["y"] - self.current_position["y"])**2)
+        distance_error = sqrt((goal_position["x"] - self.current_position["x"])**2 + (goal_position["y"] - self.current_position["y"])**2)
 
         dx = goal_position["x"] - self.current_position["x"]
         dy = goal_position["y"] - self.current_position["y"]
 
-        theta_desired = math.atan2(dy, dx)
+        theta_desired = atan2(dy, dx)
         if theta_desired < 0:
-            theta_desired = 2 * math.pi + theta_desired
+            theta_desired = 2 * pi + theta_desired
         angle_error = theta_desired - self.current_position["theta"]
         ######### Your code ends here #########
 
-        if angle_error > math.pi:
-            angle_error -= 2 * math.pi
-        elif angle_error < -math.pi:
-            angle_error += 2 * math.pi
+        if angle_error > pi:
+            angle_error -= 2 * pi
+        elif angle_error < -pi:
+            angle_error += 2 * pi
         return distance_error, angle_error
 
     def control_robot(self):
