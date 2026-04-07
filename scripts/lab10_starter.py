@@ -146,7 +146,16 @@ class RrtPlanner:
     def _nearest_vertex(self, graph: List[Node], q: Node) -> Node:
         # Determine vertex nearest to sampled point
         ######### Your code starts here #########
-
+        mindist = np.inf
+        minnode = None
+        for node in graph:
+            dist = q.distance_to(node)
+            if(dist < mindist):
+                mindist = dist
+                minnode = node
+                
+        return minnode
+            
         ######### Your code ends here #########
 
     def _is_in_collision(self, q_rand: Node):
@@ -166,7 +175,9 @@ class RrtPlanner:
 
         # Check if sampled point is in collision and add to tree if not
         ######### Your code starts here #########
-
+        if not self._is_in_collision(q_rand):
+            graph.append(q_rand)
+            
         ######### Your code ends here #########
 
     def generate_plan(self, start: POSITION_TYPE, goal: POSITION_TYPE) -> Tuple[List[POSITION_TYPE], List[Node]]:
