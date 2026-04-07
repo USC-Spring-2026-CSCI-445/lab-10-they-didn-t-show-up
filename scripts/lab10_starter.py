@@ -202,6 +202,9 @@ class RrtPlanner:
         goal_node = Node(np.array([goal["x"], goal["y"]]), None)
         plan = []
 
+        stepSize = .2 #CHANGE THESE VALUES BETWEEN ITERATIONS
+        numIters = 1000
+        
         # Find path from start to goal location through tree
         ######### Your code starts here #########
 
