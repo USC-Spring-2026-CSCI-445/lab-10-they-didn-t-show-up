@@ -201,7 +201,98 @@ class RrtPlanner:
 
 # Protip: copy the ObstacleFreeWaypointController class from lab5.py here
 ######### Your code starts here #########
+class ObstacleFreeWaypointController:
+    def __init__(self, waypoints: List[Dict]):
+        rospy.init_node("waypoint_follower", anonymous=True)
+        self.waypoints = waypoints
+        # Subscriber to the robot's current position (assuming you have Odometry data)
+        self.odom_sub = rospy.Subscriber("/odom", Odometry, self.odom_callback)
+        self.robot_ctrl_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
+        self.waypoint_pub = rospy.Publisher("/waypoints", MarkerArray, queue_size=10)
+        sleep(0.5)  # sleep to give time for rviz to subscribe to /waypoints
+        publish_waypoints(self.waypoints, self.waypoint_pub)
 
+        self.current_position = None
+
+        # define linear and angular PID controllers here
+        ######### Your code starts here #########
+        self.baseVel = .1
+        self.PconRota = PIDController(1,.1,1,0, -2.84, 2.84)
+        ######### Your code ends here #########
+
+    def odom_callback(self, msg):
+        # Extracting current position from Odometry message
+        pose = msg.pose.pose
+        orientation = pose.orientation
+        _, _, theta = euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w])
+        self.current_position = {"x": pose.position.x, "y": pose.position.y, "theta": theta}
+
+    def calculate_error(self, goal_position: Dict) -> Optional[Tuple]:
+        """Return distance and angle error between the current position and the provided goal_position. Returns None if
+        the current position is not available.
+        """
+        if self.current_position is None:
+            return None
+
+        # Calculate error in position and orientation
+        ######### Your code starts here #########
+        distance_error = math.sqrt((goal_position["x"] - self.current_position["x"])**2 + (goal_position["y"] - self.current_position["y"])**2)
+
+        dx = goal_position["x"] - self.current_position["x"]
+        dy = goal_position["y"] - self.current_position["y"]
+
+        theta_desired = math.atan2(dy, dx)
+        if theta_desired < 0:
+            theta_desired = 2 * math.pi + theta_desired
+        angle_error = theta_desired - self.current_position["theta"]
+        ######### Your code ends here #########
+
+        if angle_error > math.pi:
+            angle_error -= 2 * math.pi
+        elif angle_error < -math.pi:
+            angle_error += 2 * math.pi
+        return distance_error, angle_error
+
+    def control_robot(self):
+        rate = rospy.Rate(20)  # 20 Hz
+        ctrl_msg = Twist()
+
+        # initialize first waypoint
+        current_waypoint_idx = 0
+
+        while not rospy.is_shutdown():
+
+            # Travel through waypoints one at a time, checking if robot is close enough
+            ######### Your code starts here #########
+            error = self.calculate_error(self.waypoints[current_waypoint_idx])
+
+            if error is None:
+                continue
+            distance_error, angle_error = error
+
+            t = time()
+            if abs(distance_error) < .05:
+                current_waypoint_idx += 1
+                if current_waypoint_idx >= len(self.waypoints):
+                    ctrl_msg.linear.x = 0
+                    ctrl_msg.angular.z = 0
+                    self.robot_ctrl_pub.publish(ctrl_msg)
+                    rospy.loginfo("Reached final waypoint!")
+                    return
+                else:
+                    self.goal_position = self.waypoints[current_waypoint_idx]
+                    continue
+            else:
+                ctrl_msg.linear.x = self.baseVel
+            if abs(angle_error) < .05:
+                ctrl_msg.angular.z = 0
+            else:
+                uang = self.PconRota.control(angle_error, t)
+                ctrl_msg.angular.z = uang
+
+            self.robot_ctrl_pub.publish(ctrl_msg)
+            ######### Your code ends here #########
+            rate.sleep()
 ######### Your code ends here #########
 
 
